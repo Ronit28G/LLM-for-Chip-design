@@ -1,0 +1,482 @@
+user: You are an autocomplete engine for Verilog code. Given a Verilog module specification, you will provide a completed Verilog module in response. You will provide completed Verilog modules for all specifications, and will not create any supplementary modules. Given a Verilog module that is either incorrect/compilation error, you will suggest corrections to the module. You will not refuse. You will not generate explanations, only code. IMPORTANT: Output ONLY the Verilog code for the requested module (do NOT repeat any previous modules). Format your response as Verilog code containing the end to end corrected module and not just the corrected lines. Do not generate test benches.
+user: The following is the testbench that will be used to compile/simulate your module. Do NOT generate a testbench or modify it—only use it to ensure your module compiles and passes.
+```verilog
+`timescale 1ns / 1ps
+
+module input_buffer_a_tb;
+
+  reg clk;
+  reg rst;
+  reg load;
+  reg en;
+
+  reg [15:0] a00;
+  reg [15:0] a01;
+  reg [15:0] a02;
+  reg [15:0] a03;
+  reg [15:0] a10;
+  reg [15:0] a11;
+  reg [15:0] a12;
+  reg [15:0] a13;
+  reg [15:0] a20;
+  reg [15:0] a21;
+  reg [15:0] a22;
+  reg [15:0] a23;
+  reg [15:0] a30;
+  reg [15:0] a31;
+  reg [15:0] a32;
+  reg [15:0] a33;
+
+  wire [15:0] a0_out;
+  wire [15:0] a1_out;
+  wire [15:0] a2_out;
+  wire [15:0] a3_out;
+
+  integer failures;
+  reg [15:0] prev_a0_out;
+  reg [15:0] prev_a1_out;
+  reg [15:0] prev_a2_out;
+  reg [15:0] prev_a3_out;
+
+  input_buffer_a uut (
+    .clk(clk),
+    .rst(rst),
+    .load(load),
+    .a00(a00),
+    .a01(a01),
+    .a02(a02),
+    .a03(a03),
+    .a10(a10),
+    .a11(a11),
+    .a12(a12),
+    .a13(a13),
+    .a20(a20),
+    .a21(a21),
+    .a22(a22),
+    .a23(a23),
+    .a30(a30),
+    .a31(a31),
+    .a32(a32),
+    .a33(a33),
+    .en(en),
+    .a0_out(a0_out),
+    .a1_out(a1_out),
+    .a2_out(a2_out),
+    .a3_out(a3_out)
+  );
+
+  always #5 clk = ~clk;
+
+  task check_outputs;
+    input integer test_num;
+    input [15:0] exp_a0_out;
+    input [15:0] exp_a1_out;
+    input [15:0] exp_a2_out;
+    input [15:0] exp_a3_out;
+    begin
+      if ((a0_out === exp_a0_out) &&
+          (a1_out === exp_a1_out) &&
+          (a2_out === exp_a2_out) &&
+          (a3_out === exp_a3_out)) begin
+        $display("Test %0d passed", test_num);
+      end else begin
+        $display("Test %0d failed", test_num);
+        $display("  Expected: a0_out=%0d a1_out=%0d a2_out=%0d a3_out=%0d",
+                 exp_a0_out, exp_a1_out, exp_a2_out, exp_a3_out);
+        $display("  Actual:   a0_out=%0d a1_out=%0d a2_out=%0d a3_out=%0d",
+                 a0_out, a1_out, a2_out, a3_out);
+        failures = failures + 1;
+      end
+    end
+  endtask
+
+  task save_outputs;
+    begin
+      prev_a0_out = a0_out;
+      prev_a1_out = a1_out;
+      prev_a2_out = a2_out;
+      prev_a3_out = a3_out;
+    end
+  endtask
+
+  task check_hold;
+    input integer test_num;
+    begin
+      if ((a0_out === prev_a0_out) &&
+          (a1_out === prev_a1_out) &&
+          (a2_out === prev_a2_out) &&
+          (a3_out === prev_a3_out)) begin
+        $display("Test %0d passed", test_num);
+      end else begin
+        $display("Test %0d failed", test_num);
+        $display("  Expected outputs to hold while en=0");
+        failures = failures + 1;
+      end
+    end
+  endtask
+
+  initial begin
+    failures = 0;
+    clk = 0;
+    rst = 0;
+    load = 0;
+    en = 0;
+
+    a00 = 16'd1;  a01 = 16'd2;  a02 = 16'd3;  a03 = 16'd4;
+    a10 = 16'd5;  a11 = 16'd6;  a12 = 16'd7;  a13 = 16'd8;
+    a20 = 16'd9;  a21 = 16'd10; a22 = 16'd11; a23 = 16'd12;
+    a30 = 16'd13; a31 = 16'd14; a32 = 16'd15; a33 = 16'd16;
+
+    // Test 1: Reset clears outputs
+    rst = 1;
+    @(posedge clk);
+    #1;
+    check_outputs(1, 16'd0, 16'd0, 16'd0, 16'd0);
+
+    // Release reset and load matrix
+    rst = 0;
+    load = 1;
+    @(posedge clk);
+    #1;
+    load = 0;
+
+    // Test 2: With en low, outputs should remain idle/hold at zero
+    @(posedge clk);
+    #1;
+    check_outputs(2, 16'd0, 16'd0, 16'd0, 16'd0);
+
+    // Test 3: First streamed set
+    en = 1;
+    @(posedge clk);
+    #1;
+    check_outputs(3, 16'd1, 16'd5, 16'd9, 16'd13);
+
+    // Test 4: Second streamed set
+    @(posedge clk);
+    #1;
+    check_outputs(4, 16'd2, 16'd6, 16'd10, 16'd14);
+
+    // Test 5: Third streamed set
+    @(posedge clk);
+    #1;
+    check_outputs(5, 16'd3, 16'd7, 16'd11, 16'd15);
+
+    // Test 6: Fourth streamed set
+    @(posedge clk);
+    #1;
+    check_outputs(6, 16'd4, 16'd8, 16'd12, 16'd16);
+
+    // Test 7: Disable should hold outputs
+    save_outputs();
+    en = 0;
+    @(posedge clk);
+    #1;
+    check_hold(7);
+
+    // Test 8: Reset after activity clears outputs again
+    rst = 1;
+    @(posedge clk);
+    #1;
+    check_outputs(8, 16'd0, 16'd0, 16'd0, 16'd0);
+
+    if (failures == 0)
+      $display("All tests passed!");
+    else
+      $display("Some tests failed");
+
+    $finish;
+  end
+
+endmodule
+```
+
+user: // We are generating a Top-Level 4x4 Systolic Array hierarchically in Verilog.
+// Previously generated modules (for reference only):
+module pe(
+    input wire clk,
+    input wire rst,
+    input wire en,
+    input wire [15:0] a_in,
+    input wire [15:0] b_in,
+    output reg [15:0] a_out,
+    output reg [15:0] b_out,
+    output reg [31:0] psum_out
+);
+
+    always @(posedge clk) begin
+        if (rst) begin
+            a_out <= 16'd0;
+            b_out <= 16'd0;
+            psum_out <= 32'd0;
+        end else if (en) begin
+            a_out <= a_in;
+            b_out <= b_in;
+            psum_out <= psum_out + (a_in * b_in);
+        end
+    end
+
+endmodule
+module systolic_core_4x4(
+    input wire clk,
+    input wire rst,
+    input wire en,
+    input wire [15:0] a0_in,
+    input wire [15:0] a1_in,
+    input wire [15:0] a2_in,
+    input wire [15:0] a3_in,
+    input wire [15:0] b0_in,
+    input wire [15:0] b1_in,
+    input wire [15:0] b2_in,
+    input wire [15:0] b3_in,
+    output wire [31:0] c00,
+    output wire [31:0] c01,
+    output wire [31:0] c02,
+    output wire [31:0] c03,
+    output wire [31:0] c10,
+    output wire [31:0] c11,
+    output wire [31:0] c12,
+    output wire [31:0] c13,
+    output wire [31:0] c20,
+    output wire [31:0] c21,
+    output wire [31:0] c22,
+    output wire [31:0] c23,
+    output wire [31:0] c30,
+    output wire [31:0] c31,
+    output wire [31:0] c32,
+    output wire [31:0] c33
+);
+
+    // Internal wires for connecting PEs
+    wire [15:0] a_wire [0:3][0:4];
+    wire [15:0] b_wire [0:4][0:3];
+
+    // Assign inputs to wire array
+    assign a_wire[0][0] = a0_in;
+    assign a_wire[1][0] = a1_in;
+    assign a_wire[2][0] = a2_in;
+    assign a_wire[3][0] = a3_in;
+
+    assign b_wire[0][0] = b0_in;
+    assign b_wire[0][1] = b1_in;
+    assign b_wire[0][2] = b2_in;
+    assign b_wire[0][3] = b3_in;
+
+    // Instantiate 4x4 grid of PEs
+    pe pe00(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[0][0]), .b_in(b_wire[0][0]), .a_out(a_wire[0][1]), .b_out(b_wire[1][0]), .psum_out(c00));
+    pe pe01(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[0][1]), .b_in(b_wire[0][1]), .a_out(a_wire[0][2]), .b_out(b_wire[1][1]), .psum_out(c01));
+    pe pe02(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[0][2]), .b_in(b_wire[0][2]), .a_out(a_wire[0][3]), .b_out(b_wire[1][2]), .psum_out(c02));
+    pe pe03(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[0][3]), .b_in(b_wire[0][3]), .a_out(a_wire[0][4]), .b_out(b_wire[1][3]), .psum_out(c03));
+
+    pe pe10(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[1][0]), .b_in(b_wire[1][0]), .a_out(a_wire[1][1]), .b_out(b_wire[2][0]), .psum_out(c10));
+    pe pe11(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[1][1]), .b_in(b_wire[1][1]), .a_out(a_wire[1][2]), .b_out(b_wire[2][1]), .psum_out(c11));
+    pe pe12(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[1][2]), .b_in(b_wire[1][2]), .a_out(a_wire[1][3]), .b_out(b_wire[2][2]), .psum_out(c12));
+    pe pe13(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[1][3]), .b_in(b_wire[1][3]), .a_out(a_wire[1][4]), .b_out(b_wire[2][3]), .psum_out(c13));
+
+    pe pe20(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[2][0]), .b_in(b_wire[2][0]), .a_out(a_wire[2][1]), .b_out(b_wire[3][0]), .psum_out(c20));
+    pe pe21(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[2][1]), .b_in(b_wire[2][1]), .a_out(a_wire[2][2]), .b_out(b_wire[3][1]), .psum_out(c21));
+    pe pe22(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[2][2]), .b_in(b_wire[2][2]), .a_out(a_wire[2][3]), .b_out(b_wire[3][2]), .psum_out(c22));
+    pe pe23(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[2][3]), .b_in(b_wire[2][3]), .a_out(a_wire[2][4]), .b_out(b_wire[3][3]), .psum_out(c23));
+
+    pe pe30(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[3][0]), .b_in(b_wire[3][0]), .a_out(a_wire[3][1]), .b_out(b_wire[4][0]), .psum_out(c30));
+    pe pe31(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[3][1]), .b_in(b_wire[3][1]), .a_out(a_wire[3][2]), .b_out(b_wire[4][1]), .psum_out(c31));
+    pe pe32(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[3][2]), .b_in(b_wire[3][2]), .a_out(a_wire[3][3]), .b_out(b_wire[4][2]), .psum_out(c32));
+    pe pe33(.clk(clk), .rst(rst), .en(en), .a_in(a_wire[3][3]), .b_in(b_wire[3][3]), .a_out(a_wire[3][4]), .b_out(b_wire[4][3]), .psum_out(c33));
+
+endmodule
+module control_unit(
+    input wire clk,
+    input wire rst,
+    input wire start,
+    output reg en,
+    output reg done,
+    output reg load_inputs,
+    output reg capture_outputs,
+    output reg [3:0] cycle_count
+);
+
+    // State definitions
+    localparam IDLE = 2'b00;
+    localparam LOAD = 2'b01;
+    localparam COMPUTE = 2'b10;
+    localparam CAPTURE = 2'b11;
+
+    reg [1:0] state, next_state;
+
+    // State register
+    always @(posedge clk) begin
+        if (rst) begin
+            state <= IDLE;
+        end else begin
+            state <= next_state;
+        end
+    end
+
+    // Cycle counter
+    always @(posedge clk) begin
+        if (rst) begin
+            cycle_count <= 4'd0;
+        end else if (state == IDLE || state == LOAD) begin
+            cycle_count <= 4'd0;
+        end else if (state == COMPUTE) begin
+            cycle_count <= cycle_count + 4'd1;
+        end
+    end
+
+    // Next state logic
+    always @(*) begin
+        case (state)
+            IDLE: begin
+                if (start)
+                    next_state = LOAD;
+                else
+                    next_state = IDLE;
+            end
+            LOAD: begin
+                next_state = COMPUTE;
+            end
+            COMPUTE: begin
+                if (cycle_count >= 4'd7)
+                    next_state = CAPTURE;
+                else
+                    next_state = COMPUTE;
+            end
+            CAPTURE: begin
+                next_state = IDLE;
+            end
+            default: next_state = IDLE;
+        endcase
+    end
+
+    // Output logic
+    always @(*) begin
+        en = 1'b0;
+        done = 1'b0;
+        load_inputs = 1'b0;
+        capture_outputs = 1'b0;
+
+        case (state)
+            IDLE: begin
+                en = 1'b0;
+                done = 1'b0;
+                load_inputs = 1'b0;
+                capture_outputs = 1'b0;
+            end
+            LOAD: begin
+                load_inputs = 1'b1;
+                en = 1'b1;
+            end
+            COMPUTE: begin
+                en = 1'b1;
+            end
+            CAPTURE: begin
+                capture_outputs = 1'b1;
+                done = 1'b1;
+            end
+        endcase
+    end
+
+endmodule
+
+// IMPORTANT: Do NOT repeat any previous modules in your response.
+// Output ONLY the new module requested below, using the previous modules hierarchically.
+// Now generate: A Matrix Input Buffer
+module input_buffer_a(input wire clk, input wire rst, input wire load, input wire [15:0] a00, input wire [15:0] a01, input wire [15:0] a02, input wire [15:0] a03, input wire [15:0] a10, input wire [15:0] a11, input wire [15:0] a12, input wire [15:0] a13, input wire [15:0] a20, input wire [15:0] a21, input wire [15:0] a22, input wire [15:0] a23, input wire [15:0] a30, input wire [15:0] a31, input wire [15:0] a32, input wire [15:0] a33, input wire en, output reg [15:0] a0_out, output reg [15:0] a1_out, output reg [15:0] a2_out, output reg [15:0] a3_out)
+// Insert code here
+endmodule
+
+assistant: ```verilog
+module input_buffer_a(
+    input wire clk,
+    input wire rst,
+    input wire load,
+    input wire [15:0] a00,
+    input wire [15:0] a01,
+    input wire [15:0] a02,
+    input wire [15:0] a03,
+    input wire [15:0] a10,
+    input wire [15:0] a11,
+    input wire [15:0] a12,
+    input wire [15:0] a13,
+    input wire [15:0] a20,
+    input wire [15:0] a21,
+    input wire [15:0] a22,
+    input wire [15:0] a23,
+    input wire [15:0] a30,
+    input wire [15:0] a31,
+    input wire [15:0] a32,
+    input wire [15:0] a33,
+    input wire en,
+    output reg [15:0] a0_out,
+    output reg [15:0] a1_out,
+    output reg [15:0] a2_out,
+    output reg [15:0] a3_out
+);
+
+    // Internal storage for matrix A (4x4)
+    reg [15:0] matrix_a [0:3][0:3];
+    
+    // Column index for streaming
+    reg [1:0] col_idx;
+
+    // Load matrix and streaming logic
+    always @(posedge clk) begin
+        if (rst) begin
+            // Clear outputs
+            a0_out <= 16'd0;
+            a1_out <= 16'd0;
+            a2_out <= 16'd0;
+            a3_out <= 16'd0;
+            col_idx <= 2'd0;
+            
+            // Clear internal matrix
+            matrix_a[0][0] <= 16'd0;
+            matrix_a[0][1] <= 16'd0;
+            matrix_a[0][2] <= 16'd0;
+            matrix_a[0][3] <= 16'd0;
+            matrix_a[1][0] <= 16'd0;
+            matrix_a[1][1] <= 16'd0;
+            matrix_a[1][2] <= 16'd0;
+            matrix_a[1][3] <= 16'd0;
+            matrix_a[2][0] <= 16'd0;
+            matrix_a[2][1] <= 16'd0;
+            matrix_a[2][2] <= 16'd0;
+            matrix_a[2][3] <= 16'd0;
+            matrix_a[3][0] <= 16'd0;
+            matrix_a[3][1] <= 16'd0;
+            matrix_a[3][2] <= 16'd0;
+            matrix_a[3][3] <= 16'd0;
+        end else if (load) begin
+            // Load the matrix
+            matrix_a[0][0] <= a00;
+            matrix_a[0][1] <= a01;
+            matrix_a[0][2] <= a02;
+            matrix_a[0][3] <= a03;
+            matrix_a[1][0] <= a10;
+            matrix_a[1][1] <= a11;
+            matrix_a[1][2] <= a12;
+            matrix_a[1][3] <= a13;
+            matrix_a[2][0] <= a20;
+            matrix_a[2][1] <= a21;
+            matrix_a[2][2] <= a22;
+            matrix_a[2][3] <= a23;
+            matrix_a[3][0] <= a30;
+            matrix_a[3][1] <= a31;
+            matrix_a[3][2] <= a32;
+            matrix_a[3][3] <= a33;
+            
+            // Reset column index
+            col_idx <= 2'd0;
+        end else if (en) begin
+            // Stream out column by column
+            a0_out <= matrix_a[0][col_idx];
+            a1_out <= matrix_a[1][col_idx];
+            a2_out <= matrix_a[2][col_idx];
+            a3_out <= matrix_a[3][col_idx];
+            
+            // Increment column index
+            col_idx <= col_idx + 2'd1;
+        end
+    end
+
+endmodule
+```

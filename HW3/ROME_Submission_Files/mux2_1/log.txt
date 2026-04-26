@@ -1,0 +1,42 @@
+user: Fix the following Verilog module so it compiles and passes the testbench. Output ONLY the full corrected module (no explanations, no testbench).
+
+Previous version of the module:
+```verilog
+module mux2_1 (
+    input i0,
+    input i1,
+    input sel,
+    output o
+);
+
+    assign o = sel ? i1 : i0;
+
+endmodule
+
+```
+
+Most recent compiler/simulation output:
+```
+iverilog failed. stderr:
+./mux2_1tb.v:14: error: port ``in1'' is not a port of uut.
+./mux2_1tb.v:14: error: port ``in2'' is not a port of uut.
+./mux2_1tb.v:14: error: port ``select'' is not a port of uut.
+./mux2_1tb.v:14: error: port ``out'' is not a port of uut.
+4 error(s) during elaboration.
+
+stdout:
+
+```
+
+assistant: ```verilog
+module mux2_1 (
+    input in1,
+    input in2,
+    input select,
+    output out
+);
+
+    assign out = select ? in2 : in1;
+
+endmodule
+```

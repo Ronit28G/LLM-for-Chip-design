@@ -1,0 +1,148 @@
+user: You are an autocomplete engine for Verilog code. Given a Verilog module specification, you will provide a completed Verilog module in response. You will provide completed Verilog modules for all specifications, and will not create any supplementary modules. Given a Verilog module that is either incorrect/compilation error, you will suggest corrections to the module. You will not refuse. You will not generate explanations, only code. IMPORTANT: Output ONLY the Verilog code for the requested module (do NOT repeat any previous modules). Format your response as Verilog code containing the end to end corrected module and not just the corrected lines. Do not generate test benches.
+user: Fix the following Verilog module so it compiles and passes the testbench. Output ONLY the full corrected module (no explanations, no testbench).
+
+Previous version of the module:
+```verilog
+module systolic_array_4x4(
+    input wire clk,
+    input wire rst,
+    input wire start,
+    input wire [15:0] a00, input wire [15:0] a01, input wire [15:0] a02, input wire [15:0] a03,
+    input wire [15:0] a10, input wire [15:0] a11, input wire [15:0] a12, input wire [15:0] a13,
+    input wire [15:0] a20, input wire [15:0] a21, input wire [15:0] a22, input wire [15:0] a23,
+    input wire [15:0] a30, input wire [15:0] a31, input wire [15:0] a32, input wire [15:0] a33,
+    input wire [15:0] b00, input wire [15:0] b01, input wire [15:0] b02, input wire [15:0] b03,
+    input wire [15:0] b10, input wire [15:0] b11, input wire [15:0] b12, input wire [15:0] b13,
+    input wire [15:0] b20, input wire [15:0] b21, input wire [15:0] b22, input wire [15:0] b23,
+    input wire [15:0] b30, input wire [15:0] b31, input wire [15:0] b32, input wire [15:0] b33,
+    output wire done,
+    output wire [31:0] c00, output wire [31:0] c01, output wire [31:0] c02, output wire [31:0] c03,
+    output wire [31:0] c10, output wire [31:0] c11, output wire [31:0] c12, output wire [31:0] c13,
+    output wire [31:0] c20, output wire [31:0] c21, output wire [31:0] c22, output wire [31:0] c23,
+    output wire [31:0] c30, output wire [31:0] c31, output wire [31:0] c32, output wire [31:0] c33
+);
+
+    // Control signals
+    wire en;
+    wire load_inputs;
+    wire capture_outputs;
+    wire [3:0] cycle_count;
+
+    // Input buffer outputs
+    wire [15:0] a0_stream, a1_stream, a2_stream, a3_stream;
+    wire [15:0] b0_stream, b1_stream, b2_stream, b3_stream;
+
+    // Systolic core outputs
+    wire [31:0] c00_core, c01_core, c02_core, c03_core;
+    wire [31:0] c10_core, c11_core, c12_core, c13_core;
+    wire [31:0] c20_core, c21_core, c22_core, c23_core;
+    wire [31:0] c30_core, c31_core, c32_core, c33_core;
+
+    // Instantiate control unit
+    control_unit ctrl (
+        .clk(clk),
+        .rst(rst),
+        .start(start),
+        .en(en),
+        .done(done),
+        .load_inputs(load_inputs),
+        .capture_outputs(capture_outputs),
+        .cycle_count(cycle_count)
+    );
+
+    // Instantiate input buffer A
+    input_buffer_a buf_a (
+        .clk(clk),
+        .rst(rst),
+        .load(load_inputs),
+        .a00(a00), .a01(a01), .a02(a02), .a03(a03),
+        .a10(a10), .a11(a11), .a12(a12), .a13(a13),
+        .a20(a20), .a21(a21), .a22(a22), .a23(a23),
+        .a30(a30), .a31(a31), .a32(a32), .a33(a33),
+        .en(en),
+        .a0_out(a0_stream),
+        .a1_out(a1_stream),
+        .a2_out(a2_stream),
+        .a3_out(a3_stream)
+    );
+
+    // Instantiate input buffer B
+    input_buffer_b buf_b (
+        .clk(clk),
+        .rst(rst),
+        .load(load_inputs),
+        .b00(b00), .b01(b01), .b02(b02), .b03(b03),
+        .b10(b10), .b11(b11), .b12(b12), .b13(b13),
+        .b20(b20), .b21(b21), .b22(b22), .b23(b23),
+        .b30(b30), .b31(b31), .b32(b32), .b33(b33),
+        .en(en),
+        .b0_out(b0_stream),
+        .b1_out(b1_stream),
+        .b2_out(b2_stream),
+        .b3_out(b3_stream)
+    );
+
+    // Instantiate systolic core
+    systolic_core_4x4 core (
+        .clk(clk),
+        .rst(rst),
+        .en(en),
+        .a0_in(a0_stream),
+        .a1_in(a1_stream),
+        .a2_in(a2_stream),
+        .a3_in(a3_stream),
+        .b0_in(b0_stream),
+        .b1_in(b1_stream),
+        .b2_in(b2_stream),
+        .b3_in(b3_stream),
+        .c00(c00_core), .c01(c01_core), .c02(c02_core), .c03(c03_core),
+        .c10(c10_core), .c11(c11_core), .c12(c12_core), .c13(c13_core),
+        .c20(c20_core), .c21(c21_core), .c22(c22_core), .c23(c23_core),
+        .c30(c30_core), .c31(c31_core), .c32(c32_core), .c33(c33_core)
+    );
+
+    // Instantiate output buffer
+    output_buffer buf_out (
+        .clk(clk),
+        .rst(rst),
+        .capture(capture_outputs),
+        .c00_in(c00_core), .c01_in(c01_core), .c02_in(c02_core), .c03_in(c03_core),
+        .c10_in(c10_core), .c11_in(c11_core), .c12_in(c12_core), .c13_in(c13_core),
+        .c20_in(c20_core), .c21_in(c21_core), .c22_in(c22_core), .c23_in(c23_core),
+        .c30_in(c30_core), .c31_in(c31_core), .c32_in(c32_core), .c33_in(c33_core),
+        .c00_out(c00), .c01_out(c01), .c02_out(c02), .c03_out(c03),
+        .c10_out(c10), .c11_out(c11), .c12_out(c12), .c13_out(c13),
+        .c20_out(c20), .c21_out(c21), .c22_out(c22), .c23_out(c23),
+        .c30_out(c30), .c31_out(c31), .c32_out(c32), .c33_out(c33)
+    );
+
+endmodule
+
+```
+
+Most recent compiler/simulation output:
+```
+Simulation output:
+Test 1 passed
+Test 2 passed
+Test 3 passed
+Test 4 passed
+Test 5 failed
+  Expected result matrix:
+   [36  50  44  20]
+   [ 0  91 147 185]
+   [ 0   0 154 260]
+   [ 0   0   0 225]
+  Actual result matrix:
+   [0 0 0 0]
+   [0 0 0 0]
+   [0 0 0 0]
+   [0 0 0 0]
+Test 6 passed
+Test 7 failed
+  Expected A x I = A
+Some tests failed
+
+
+```
+

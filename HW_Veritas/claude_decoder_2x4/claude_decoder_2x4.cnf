@@ -1,0 +1,21 @@
+# 2x4 Decoder CNF Equations
+
+For a 2x4 decoder with inputs A, B and outputs Y0, Y1, Y2, Y3:
+
+**Y0 = (!A) ∧ (!B)**
+
+**Y1 = (!A) ∧ (B)**
+
+**Y2 = (A) ∧ (!B)**
+
+**Y3 = (A) ∧ (B)**
+
+Or equivalently:
+
+**Y0 = !A AND !B**
+
+**Y1 = !A AND B**
+
+**Y2 = A AND !B**
+
+**Y3 = A AND B**
